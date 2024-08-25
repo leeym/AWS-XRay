@@ -25,6 +25,7 @@ our $SAMPLED;
 our $SAMPLING_RATE = 1;
 our $SAMPLER       = sub { rand() < $SAMPLING_RATE };
 our $AUTO_FLUSH    = 1;
+our $AUTO_CLOSE    = 1;
 
 our @PLUGINS;
 
@@ -72,10 +73,27 @@ sub auto_flush {
         if ($auto_flush != $AUTO_FLUSH) {
             $Sock->close if $Sock && $Sock->can("close");
             undef $Sock; # regenerate
+            if ($auto_flush == 1) {
+                auto_close(1);
+            }
         }
         $AUTO_FLUSH = $auto_flush;
     }
     $AUTO_FLUSH;
+}
+
+sub auto_close {
+    my $class = shift;
+    if (@_) {
+        my $auto_close = shift;
+	if ($auto_close != $AUTO_CLOSE) {
+            if ($auto_close == 0) {
+                auto_flush(0);
+            }
+        }
+        $AUTO_CLOSE = $auto_close;
+    }
+    $AUTO_CLOSE;
 }
 
 sub sock {
@@ -168,11 +186,13 @@ sub capture {
             ],
         };
     }
-    eval {
-        $segment->close();
-    };
-    if ($@) {
-        warn $@;
+    if ($AUTO_CLOSE) {
+        eval {
+            $segment->close();
+        };
+        if ($@) {
+            warn $@;
+        }
     }
     die $error if $error;
     return $wantarray ? @ret : $ret[0];
@@ -379,6 +399,18 @@ Set/Get auto flush mode.
 When $mode is 1 (default), segment data will be sent to xray daemon immediately after capture() called.
 
 When $mode is 0, segment data are buffered in memory. You should call AWS::XRay->sock->flush() to send the buffered segment data or call AWS::XRay->sock->close() to discard the buffer.
+
+If auto flush mode is 1, it sets auto close mode to 1 as well.
+
+=head2 auto_close($mode)
+
+Set/Get auto close mode.
+
+When $mode is 1 (default), segment will be closed and the data will be either buffered in memory or sent to xray daemon immediately based on auto flush mode after capture() called.
+
+When $mode is 0, segment will remain open. You should call $segment->close() to close the segment, so the data can be buffered or sent. Open segments will be discarded at the end.
+
+If auto close mode is 0, it sets auto flush mode to 0 as well.
 
 =head2 AWS_XRAY_DAEMON_ADDRESS environment variable
 

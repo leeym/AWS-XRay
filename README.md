@@ -118,6 +118,18 @@ When $mode is 1 (default), segment data will be sent to xray daemon immediately 
 
 When $mode is 0, segment data are buffered in memory. You should call AWS::XRay->sock->flush() to send the buffered segment data or call AWS::XRay->sock->close() to discard the buffer.
 
+If auto flush mode is 1, it sets auto close mode to 1 as well.
+
+## auto\_close($mode)
+
+Set/Get auto close mode.
+
+When $mode is 1 (default), segment will be closed and the data will be either buffered in memory or sent to xray daemon immediately after capture() called.
+
+When $mode is 0, segment will remain open. You should call $segment->close() to close the segment, so the data can be buffered or sent. Open segments will be discarded at the end.
+
+If auto close mode is 0, it sets auto flush mode to 0 as well.
+
 ## AWS\_XRAY\_DAEMON\_ADDRESS environment variable
 
 Set the host and port of the X-Ray daemon. Default 127.0.0.1:2000
